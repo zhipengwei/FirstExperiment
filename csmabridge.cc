@@ -231,16 +231,17 @@ main (int argc, char *argv[])
   NS_LOG_INFO ("Build Topology");
   // The terminal link
   CsmaHelper csma;
-  csma.SetChannelAttribute ("DataRate", DataRateValue (EXPERIMENT_CONFIG_SENDER_LINK_DATA_RATE));
-  csma.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (EXPERIMENT_CONFIG_SENDER_LINK_DELAY)));
-  csma.SetQueue("ns3::DropTailQueue", "MaxBytes", UintegerValue(EXPERIMENT_CONFIG_INPUT_BUFFER_SIZE_BYTES), "Mode", EnumValue (DropTailQueue::QUEUE_MODE_BYTES));
+
+  csma.SetChannelAttribute ("DataRate", StringValue (CONFIG_SENDER_LINK_DATA_RATE));
+  csma.SetChannelAttribute ("Delay", StringValue (CONFIG_SENDER_LINK_DELAY));
+  csma.SetQueue("ns3::DropTailQueue", "MaxBytes", UintegerValue(CONFIG_INPUT_BUFFER_SIZE_BYTES), "Mode", EnumValue (DropTailQueue::QUEUE_MODE_BYTES));
 
   // The server link
   CsmaHelper csmaServer;
   // UintegerValue, holds an unsigned integer type.
-  csmaServer.SetQueue("ns3::DropTailQueue", "MaxBytes", UintegerValue(EXPERIMENT_CONFIG_OUTPUT_BUFFER_SIZE_BYTES), "Mode", EnumValue (DropTailQueue::QUEUE_MODE_BYTES));
-  csmaServer.SetChannelAttribute ("DataRate", DataRateValue (EXPERIMENT_CONFIG_SERVER_LINK_DATA_RATE));
-  csmaServer.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (EXPERIMENT_CONFIG_SERVER_LINK_DELAY)));
+  csmaServer.SetQueue("ns3::DropTailQueue", "MaxBytes", UintegerValue(CONFIG_OUTPUT_BUFFER_SIZE_BYTES), "Mode", EnumValue (DropTailQueue::QUEUE_MODE_BYTES));
+  csmaServer.SetChannelAttribute ("DataRate", StringValue (CONFIG_SERVER_LINK_DATA_RATE));
+  csmaServer.SetChannelAttribute ("Delay", StringValue (CONFIG_SERVER_LINK_DELAY));
 
   // Create the csma links, from each terminal to the switch
   NetDeviceContainer terminalDevices;
@@ -308,8 +309,8 @@ main (int argc, char *argv[])
    Address sinkLocalAddress (InetSocketAddress (serverIpv4.GetAddress(0), port));
    PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
    ApplicationContainer sinkApp = sinkHelper.Install (servers.Get (0));
-   sinkApp.Start (Seconds (EXPERIMENT_CONFIG_START_TIME));
-   sinkApp.Stop (Seconds (EXPERIMENT_CONFIG_STOP_TIME));
+   sinkApp.Start (Seconds (CONFIG_START_TIME));
+   sinkApp.Stop (Seconds (CONFIG_STOP_TIME));
 
    //normally wouldn't need a loop here but the server IP address is different
    //on each p2p subnet
@@ -337,12 +338,12 @@ main (int argc, char *argv[])
       // number of packets is not used here.
 
       // construct a string to denote the rate
-      ApplicationVector[i]->Setup (SocketVector[i], sinkAddress, EXPERIMENT_CONFIG_SENDER_PACKET_SIZE, 1000, DataRate (std::to_string (EXPERIMENT_CONFIG_SENDER_LINK_DATA_RATE).append("b/s")), EXPERIMENT_CONFIG_SENDER_PACKETS_PER_SHORT_FLOW, EXPERIMENT_CONFIG_SENDER_DOWNTIME_MEAN, EXPERIMENT_CONFIG_SENDER_DOWNTIME_BOUND);
+      ApplicationVector[i]->Setup (SocketVector[i], sinkAddress, CONFIG_SENDER_PACKET_SIZE, 1000, DataRate (string (CONFIG_SENDER_LINK_DATA_RATE)), CONFIG_SENDER_PACKETS_PER_SHORT_FLOW, CONFIG_SENDER_INTERVAL_MEAN, CONFIG_SENDER_INTERVAL_BOUND);
       terminals.Get (i)->AddApplication (ApplicationVector[i]);
       clientApps.Add (ApplicationVector[i]);
    }
-   clientApps.Start (Seconds (EXPERIMENT_CONFIG_START_TIME));
-   clientApps.Stop (Seconds (EXPERIMENT_CONFIG_STOP_TIME));
+   clientApps.Start (Seconds (CONFIG_START_TIME));
+   clientApps.Stop (Seconds (CONFIG_STOP_TIME));
 
 
   NS_LOG_INFO ("Configure Tracing.");
@@ -434,3 +435,5 @@ main (int argc, char *argv[])
  
  
  
+
+
