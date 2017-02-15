@@ -79,7 +79,7 @@ MyApp::Setup (Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t
   m_dataRate = dataRate;
 
   x->SetAttribute ("Mean", DoubleValue (mean));
-  x->SetAttribute ("Bound", DoubleValue(bound));
+  //x->SetAttribute ("Bound", DoubleValue(bound));
 
   m_numberPacketsPerFlow = numberPacketsPerFlow;
 }
@@ -115,10 +115,7 @@ MyApp::SendPacket (void)
 {
   Ptr<Packet> packet = Create<Packet> (m_packetSize);
   m_socket->Send (packet);
-  m_numberPacketsPerFlowCnt++;
 
-  // The 
-  //if (++m_packetsSent < m_nPackets)
   if (m_running)
     {
       ScheduleTx ();
@@ -133,14 +130,7 @@ MyApp::ScheduleTx (void)
   if (m_running)
     {
       Time tNext; 
-      if (m_numberPacketsPerFlowCnt == (m_numberPacketsPerFlow - 1)) {
-      	tNext = Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ()) + x->GetValue() + x->GetValue());
-	m_numberPacketsPerFlowCnt = 0;
-      }
-      else {
-      	tNext = Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ()));
-	m_numberPacketsPerFlowCnt++;
-      }
+      tNext = Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ()) + x->GetValue());
       // Time is used to denote delay until the next event should execute.
       m_sendEvent = Simulator::Schedule (tNext, &MyApp::SendPacket, this);
     }
@@ -215,7 +205,10 @@ main (int argc, char *argv[])
   // Explicitly create the nodes required by the topology (shown above).
   //
 
-  int numberOfTerminals = NUMBER_OF_TERMINALS;
+  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
+  Config::SetDefault("ns3::TcpSocket::SndBufSize", UintegerValue(1310720));
+
+  int numberOfTerminals = CONFIG_NUMBER_OF_TERMINALS;
   NS_LOG_INFO ("Create nodes.");
   NodeContainer terminals;
   terminals.Create (numberOfTerminals);
@@ -240,7 +233,7 @@ main (int argc, char *argv[])
   CsmaHelper csmaServer;
   // UintegerValue, holds an unsigned integer type.
   csmaServer.SetQueue("ns3::DropTailQueue", "MaxBytes", UintegerValue(CONFIG_OUTPUT_BUFFER_SIZE_BYTES), "Mode", EnumValue (DropTailQueue::QUEUE_MODE_BYTES));
-  csmaServer.SetChannelAttribute ("DataRate", StringValue (CONFIG_SERVER_LINK_DATA_RATE));
+  csmaServer.SetChannelAttribute ("DataRate", DataRateValue (CONFIG_SERVER_LINK_DATA_RATE));
   csmaServer.SetChannelAttribute ("Delay", StringValue (CONFIG_SERVER_LINK_DELAY));
 
   // Create the csma links, from each terminal to the switch
@@ -264,7 +257,7 @@ main (int argc, char *argv[])
   //oss << "/NodeList/" << csmaSwitch.Get (0) -> GetId () << "/DeviceList/4" << "/$ns3::CsmaNetDevice/TxQueue/Enqueue";
   //oss << "/NodeList/" << servers.Get (0)->GetId () << "/$ns3::CsmaNetDevice/TxQueue/Enqueue";
   //oss << "/NodeList/" << "5" << "/DeviceList/" << "4" << "/$ns3::CsmaNetDevice/TxQueue/Enqueue";
-  //cout << oss.str() << endl;
+  cout << oss.str() << endl;
   Config::Connect (oss.str(), MakeCallback (&AsciiEnqueueEvent));
   //servers.Get (0)->TraceConnect ("Enqueue", oss.str(), MakeCallback (&AsciiEnqueueEvent));
 
@@ -280,7 +273,7 @@ main (int argc, char *argv[])
   oss.clear();
   //oss << "/NodeList/" << servers.Get (0)->GetId () << "/DeviceList/" << "4" << "/$ns3::CsmaNetDevice/TxQueue/Drop";
 //  oss << "/NodeList/" << "5" << "/DeviceList/" << "4" << "/$ns3::CsmaNetDevice/TxQueue/Drop";
-  oss << "/NodeList/" << csmaSwitch.Get (0) -> GetId () << "/DeviceList/" << linkServer.Get (1)->GetIfIndex() << "/$ns3::CsmaNetDevice/TxQueue/PacketsInQueue";
+  oss << "/NodeList/" << csmaSwitch.Get (0) -> GetId () << "/DeviceList/" << linkServer.Get (1)->GetIfIndex() << "/$ns3::CsmaNetDevice/TxQueue/BytesInQueue";
   //cout << oss.str() << endl;
   Config::Connect (oss.str(), MakeCallback (&AsciiPacketsInQueue));
 
@@ -309,7 +302,7 @@ main (int argc, char *argv[])
    Address sinkLocalAddress (InetSocketAddress (serverIpv4.GetAddress(0), port));
    PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
    ApplicationContainer sinkApp = sinkHelper.Install (servers.Get (0));
-   sinkApp.Start (Seconds (CONFIG_START_TIME));
+   sinkApp.Start (Seconds (CONFIG_START_TIME - 1));
    sinkApp.Stop (Seconds (CONFIG_STOP_TIME));
 
    //normally wouldn't need a loop here but the server IP address is different
@@ -363,7 +356,7 @@ main (int argc, char *argv[])
   // display timestamps correctly)
   //
   csma.EnablePcapAll ("csma-bridge", false);
-
+  Simulator::Stop (Seconds (CONFIG_STOP_TIME));
   //
   // Now, do the actual simulation.
   //
@@ -435,5 +428,3 @@ main (int argc, char *argv[])
  
  
  
-
-
