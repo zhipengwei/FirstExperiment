@@ -130,10 +130,10 @@ MyApp::ScheduleTx (void)
     {
       Time tNext; 
       // The interval includes the transmission time of the packet;
-      tNext = Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ()) + x->GetValue());
+      //tNext = Seconds (m_packetSize * 8 / static_cast<double> (m_dataRate.GetBitRate ()) + x->GetValue());
       // The interval only includes the part which follows exponential distribution;
-      //tNext = Seconds (x->GetValue());
-      //cout << "Interval time " << tNext << endl;
+      tNext = Seconds (x->GetValue());
+      cout << "Interval time " << tNext << endl;
       // Time is used to denote delay until the next event should execute.
       m_sendEvent = Simulator::Schedule (tNext, &MyApp::SendPacket, this);
     }
@@ -164,7 +164,7 @@ CwndChange (std::string context, uint32_t oldCwnd, uint32_t newCwnd)
 static void 
 AsciiDropEvent (std::string path, Ptr<const QueueItem> packet)
 {
-  NS_LOG_UNCOND ("PacketDrop:\t" << Simulator::Now ().GetSeconds () << "\t" << path << "\t" << *packet);
+  NS_LOG_UNCOND ("PacketDrop:\t" << Simulator::Now ().GetMicroSeconds () << "\t" << path << "\t" << *packet);
 //  cout << "aaa" << endl;
 //  *os << "d " << Simulator::Now ().GetSeconds () << " ";
 //  *os << path << " " << *packet << std::endl;
@@ -173,7 +173,17 @@ AsciiDropEvent (std::string path, Ptr<const QueueItem> packet)
 static void 
 AsciiEnqueueEvent (std::string path, Ptr<const QueueItem> packet)
 {
-  NS_LOG_UNCOND ("Enqueue\t" << Simulator::Now ().GetSeconds () << "\t" << *(packet->GetPacket()) );
+  // NS_LOG_UNCOND ("Enqueue\t" << Simulator::Now ().GetMicroSeconds () << "\t" << *(packet->GetPacket()) );
+  NS_LOG_UNCOND ("Enqueue\t" << Simulator::Now ().GetMicroSeconds () << "\t" << *packet << *(packet->GetPacket()) );
+ // *os << "+ " << Simulator::Now ().GetSeconds () << " ";
+ // *os << path << " " << *packet << std::endl;
+}
+
+// Dequeue event
+static void 
+AsciiDequeueEvent (std::string path, Ptr<const QueueItem> packet)
+{
+  NS_LOG_UNCOND ("Dequeue\t" << Simulator::Now ().GetMicroSeconds () << "\t" << *(packet->GetPacket()) );
  // *os << "+ " << Simulator::Now ().GetSeconds () << " ";
  // *os << path << " " << *packet << std::endl;
 }
@@ -186,6 +196,13 @@ AsciiPacketsInQueue (std::string path, uint32_t oldValue, uint32_t newValue)
  // *os << path << " " << *packet << std::endl;
 }
 
+static void 
+AsciiPacketsInQueueNetDevice (std::string path, uint32_t oldValue, uint32_t newValue) 
+{
+  NS_LOG_UNCOND ("BytesInQueueNetDevice\t" << Simulator::Now ().GetSeconds () << "\t" << newValue);
+ // *os << "+ " << Simulator::Now ().GetSeconds () << " ";
+ // *os << path << " " << *packet << std::endl;
+}
 
 const char * IpBaseGenerator (int index) {
 	int second = 0, third = 0;
@@ -306,6 +323,14 @@ main (int argc, char *argv[])
 
   oss.str("");
   oss.clear();
+  // oss << "/NodeList/" << router.Get (0) -> GetId () << "/DeviceList/" << linkServer.Get (1)->GetIfIndex() << "/$ns3::PointToPointNetDevice/TxQueue/Dequeue";
+  oss << "/NodeList/" << router.Get (0) -> GetId () << "/$ns3::TrafficControlLayer/RootQueueDiscList/" << linkServer.Get (1)->GetIfIndex() << "/Dequeue";
+  cout << oss.str() << endl;
+  Config::Connect (oss.str(), MakeCallback (&AsciiDequeueEvent));
+  //servers.Get (0)->TraceConnect ("Enqueue", oss.str(), MakeCallback (&AsciiEnqueueEvent));
+
+  oss.str("");
+  oss.clear();
   // oss << "/NodeList/" << router.Get (0) -> GetId () << "/DeviceList/" << linkServer.Get (1)->GetIfIndex() << "/$ns3::PointToPointNetDevice/TxQueue/Drop";
   oss << "/NodeList/" << router.Get (0) -> GetId () << "/$ns3::TrafficControlLayer/RootQueueDiscList/" << linkServer.Get (1)->GetIfIndex() << "/Drop";
   cout << oss.str() << endl;
@@ -317,6 +342,14 @@ main (int argc, char *argv[])
   oss << "/NodeList/" << router.Get (0) -> GetId () << "/$ns3::TrafficControlLayer/RootQueueDiscList/" << linkServer.Get (1)->GetIfIndex() << "/BytesInQueue";
   cout << oss.str() << endl;
   Config::Connect (oss.str(), MakeCallback (&AsciiPacketsInQueue));
+
+  // This is to log down the number of bytes in the queue on the net device.
+  oss.str("");
+  oss.clear();
+  oss << "/NodeList/" << router.Get (0) -> GetId () << "/DeviceList/" << linkServer.Get (1)->GetIfIndex() << "/$ns3::PointToPointNetDevice/TxQueue/BytesInQueue";
+  //oss << "/NodeList/" << router.Get (0) -> GetId () << "/$ns3::TrafficControlLayer/RootQueueDiscList/" << linkServer.Get (1)->GetIfIndex() << "/BytesInQueue";
+  cout << oss.str() << endl;
+  Config::Connect (oss.str(), MakeCallback (&AsciiPacketsInQueueNetDevice));
 
    // Create a sink application on the server node to receive these applications. 
    uint16_t port = 50000;
